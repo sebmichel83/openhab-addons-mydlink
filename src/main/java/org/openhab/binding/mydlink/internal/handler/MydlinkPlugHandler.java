@@ -22,9 +22,8 @@ import org.openhab.binding.mydlink.internal.MydlinkBindingConstants;
 import org.openhab.binding.mydlink.internal.api.MydlinkApiClient.MydlinkDeviceInfo;
 import org.openhab.binding.mydlink.internal.api.SignalAgentClient;
 import org.openhab.binding.mydlink.internal.config.MydlinkPlugConfig;
+import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
-import org.openhab.core.library.types.QuantityType;
-import org.openhab.core.library.unit.Units;
 import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
@@ -168,6 +167,12 @@ public class MydlinkPlugHandler extends BaseThingHandler implements SignalAgentC
         // Create and connect SA client
         SignalAgentClient client = new SignalAgentClient(accessToken, userEmail);
         client.setStateChangeListener(this);
+
+        // Set device info for set_setting commands (SA protocol uses MAC as device_id)
+        if (info.mac != null && info.deviceToken != null) {
+            client.setDeviceInfo(info.mac, info.deviceToken);
+            logger.debug("Set device info: mac={}, deviceToken={}", info.mac, info.deviceToken);
+        }
 
         client.connect(dcdUrl).thenAccept(success -> {
             if (success) {
@@ -358,7 +363,7 @@ public class MydlinkPlugHandler extends BaseThingHandler implements SignalAgentC
         MydlinkDeviceInfo info = deviceInfo;
         if (info != null && deviceId.equals(info.deviceToken)) {
             updateState(MydlinkBindingConstants.CHANNEL_POWER,
-                    new QuantityType<>(power, Units.WATT));
+                    new DecimalType(power));
         }
     }
 

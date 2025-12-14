@@ -48,6 +48,7 @@ public class SignalAgentClient implements WebSocketListener {
     private final String accessToken;
     private final String userEmail;
     private final Gson gson;
+    private final String clientId;
 
     private @Nullable WebSocketClient wsClient;
     private @Nullable Session wsSession;
@@ -55,6 +56,10 @@ public class SignalAgentClient implements WebSocketListener {
     private final ConcurrentHashMap<Integer, CompletableFuture<JsonObject>> pendingRequests = new ConcurrentHashMap<>();
 
     private boolean signedIn = false;
+
+    // Device info received after sign-in (needed for set_setting)
+    private @Nullable String connectedDeviceId;
+    private @Nullable String connectedDeviceToken;
 
     /**
      * Listener interface for device state changes.
@@ -79,6 +84,7 @@ public class SignalAgentClient implements WebSocketListener {
         this.accessToken = accessToken;
         this.userEmail = userEmail;
         this.gson = new Gson();
+        this.clientId = java.util.UUID.randomUUID().toString();
     }
 
     /**
@@ -97,36 +103,40 @@ public class SignalAgentClient implements WebSocketListener {
     public CompletableFuture<Boolean> connect(String dcdUrl) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
 
-        try {
-            wsClient = new WebSocketClient();
-            wsClient.start();
+        CompletableFuture.runAsync(() -> {
+            try {
+                wsClient = new WebSocketClient();
+                wsClient.start();
 
-            ClientUpgradeRequest request = new ClientUpgradeRequest();
-            request.setSubProtocols(MydlinkBindingConstants.SA_SUBPROTOCOL);
-            request.setHeader("Origin", "https://mydlink.com");
+                ClientUpgradeRequest request = new ClientUpgradeRequest();
+                request.setSubProtocols(MydlinkBindingConstants.SA_SUBPROTOCOL);
+                request.setHeader("Origin", "https://mydlink.com");
 
-            URI uri = URI.create(dcdUrl);
-            wsClient.connect(this, uri, request).whenComplete((session, error) -> {
-                if (error != null) {
-                    logger.error("Failed to connect to DCD: {}", error.getMessage());
-                    result.complete(false);
-                } else {
+                URI uri = URI.create(dcdUrl);
+                // connect() returns Future<Session>, we need to wait for it
+                Session session = wsClient.connect(this, uri, request).get(
+                        MydlinkBindingConstants.WEBSOCKET_TIMEOUT, TimeUnit.SECONDS);
+
+                if (session != null && session.isOpen()) {
                     logger.debug("Connected to DCD relay: {}", dcdUrl);
                     // Sign in after connection
                     signIn().whenComplete((signInResult, signInError) -> {
-                        if (signInError != null || !signInResult) {
+                        if (signInError != null || !Boolean.TRUE.equals(signInResult)) {
                             logger.error("Sign-in failed");
                             result.complete(false);
                         } else {
                             result.complete(true);
                         }
                     });
+                } else {
+                    logger.error("Failed to connect to DCD: session is null or closed");
+                    result.complete(false);
                 }
-            });
-        } catch (Exception e) {
-            logger.error("Failed to create WebSocket client: {}", e.getMessage());
-            result.complete(false);
-        }
+            } catch (Exception e) {
+                logger.error("Failed to connect to DCD: {}", e.getMessage());
+                result.complete(false);
+            }
+        });
 
         return result;
     }
@@ -185,6 +195,19 @@ public class SignalAgentClient implements WebSocketListener {
     }
 
     /**
+     * Sets the device info for this connection.
+     * Must be called after getting device info from API.
+     *
+     * @param macAddress  the device's MAC address (used as device_id in SA protocol)
+     * @param deviceToken the device's full token (MAC-UUID format)
+     */
+    public void setDeviceInfo(String macAddress, String deviceToken) {
+        // In SA protocol, device_id is the MAC address without colons
+        this.connectedDeviceId = macAddress.replace(":", "").toUpperCase();
+        this.connectedDeviceToken = deviceToken;
+    }
+
+    /**
      * Switches a plug on or off.
      *
      * @param deviceToken full device token
@@ -200,20 +223,39 @@ public class SignalAgentClient implements WebSocketListener {
             return result;
         }
 
+        String devId = connectedDeviceId;
+        String devToken = connectedDeviceToken != null ? connectedDeviceToken : deviceToken;
+
+        if (devId == null) {
+            logger.warn("No device ID set, cannot switch plug");
+            result.complete(false);
+            return result;
+        }
+
         int seqId = sequenceId.incrementAndGet();
 
+        // Build setting object (matches Python implementation)
         JsonObject metadata = new JsonObject();
         metadata.addProperty("value", on ? 1 : 0);
 
+        JsonObject setting = new JsonObject();
+        setting.addProperty("uid", 0);
+        setting.addProperty("idx", 0);
+        setting.addProperty("type", MydlinkBindingConstants.SA_TYPE_PLUG);
+        setting.add("metadata", metadata);
+
+        com.google.gson.JsonArray settingArray = new com.google.gson.JsonArray();
+        settingArray.add(setting);
+
+        // Build command message (matches Python implementation)
         JsonObject setSettingMsg = new JsonObject();
         setSettingMsg.addProperty("command", "set_setting");
-        setSettingMsg.addProperty("sequence_id", seqId);
+        setSettingMsg.addProperty("client_id", clientId);
+        setSettingMsg.addProperty("device_id", devId);
+        setSettingMsg.addProperty("device_token", devToken);
         setSettingMsg.addProperty("timestamp", Instant.now().getEpochSecond());
-        setSettingMsg.addProperty("device_id", deviceToken);
-        setSettingMsg.addProperty("uid", 0);
-        setSettingMsg.addProperty("idx", 0);
-        setSettingMsg.addProperty("type", MydlinkBindingConstants.SA_TYPE_PLUG);
-        setSettingMsg.add("metadata", metadata);
+        setSettingMsg.addProperty("sequence_id", seqId);
+        setSettingMsg.add("setting", settingArray);
 
         CompletableFuture<JsonObject> responseFuture = new CompletableFuture<>();
         pendingRequests.put(seqId, responseFuture);
@@ -352,12 +394,33 @@ public class SignalAgentClient implements WebSocketListener {
     /**
      * Handles incoming event messages.
      */
-    private void handleEvent(JsonObject event) {
+    private void handleEvent(JsonObject message) {
+        // The event data is nested in the "event" field
+        JsonObject event = message.has("event") ? message.getAsJsonObject("event") : message;
+
         int type = event.has("type") ? event.get("type").getAsInt() : 0;
-        String deviceId = event.has("device_id") ? event.get("device_id").getAsString() : "";
+        String deviceId = message.has("device_id") ? message.get("device_id").getAsString() : "";
 
         if (type == MydlinkBindingConstants.SA_EVENT_SETTING_CHANGE) {
-            // Setting change event
+            // Setting change event - this confirms the set_setting was successful
+            logger.debug("Setting change event received for device {}", deviceId);
+
+            // Resolve any pending set_setting requests (they don't get a direct response)
+            JsonObject successResponse = new JsonObject();
+            successResponse.addProperty("code", 0);
+            successResponse.addProperty("message", "confirmed by event");
+
+            for (var entry : pendingRequests.entrySet()) {
+                CompletableFuture<JsonObject> future = entry.getValue();
+                if (!future.isDone()) {
+                    future.complete(successResponse);
+                    pendingRequests.remove(entry.getKey());
+                    logger.debug("Resolved pending request {} via event confirmation", entry.getKey());
+                    break; // Only resolve one at a time
+                }
+            }
+
+            // Also notify listener about state change
             if (event.has("metadata")) {
                 JsonObject metadata = event.getAsJsonObject("metadata");
                 int settingType = metadata.has("type") ? metadata.get("type").getAsInt() : 0;

@@ -27,6 +27,7 @@ import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.config.discovery.DiscoveryResultBuilder;
 import org.openhab.core.thing.ThingTypeUID;
 import org.openhab.core.thing.ThingUID;
+import org.openhab.core.thing.binding.ThingHandler;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ServiceScope;
 import org.slf4j.Logger;
@@ -54,12 +55,13 @@ public class MydlinkDiscoveryService extends AbstractThingHandlerDiscoveryServic
     protected void startScan() {
         logger.debug("Starting mydlink device discovery");
 
-        MydlinkAccountHandler handler = thingHandler;
-        if (handler == null) {
+        ThingHandler thingHandler = getThingHandler();
+        if (!(thingHandler instanceof MydlinkAccountHandler)) {
             logger.warn("Account handler not available");
             return;
         }
 
+        MydlinkAccountHandler handler = (MydlinkAccountHandler) thingHandler;
         ThingUID bridgeUID = handler.getThing().getUID();
 
         for (MydlinkDevice device : handler.getDevices()) {
@@ -91,11 +93,5 @@ public class MydlinkDiscoveryService extends AbstractThingHandlerDiscoveryServic
 
             logger.debug("Discovered device: {} ({})", device.deviceName, device.mydlinkId);
         }
-    }
-
-    @Override
-    public void initialize() {
-        thingHandler = getThingHandler();
-        super.initialize();
     }
 }
