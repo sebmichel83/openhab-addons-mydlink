@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<binding:binding id="mydlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:binding="https://openhab.org/schemas/binding/v1.0.0"
+    xsi:schemaLocation="https://openhab.org/schemas/binding/v1.0.0 https://openhab.org/schemas/binding-1.0.0.xsd">
+
+    <name>mydlink Binding</name>
+    <description>Binding for D-Link mydlink Smart Plugs (DSP-W115, DSP-W118, DSP-W218, DSP-W245, DSP-W320)</description>
+    <author>Sebastian Michel</author>
+
+</binding:binding>

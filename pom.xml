@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.openhab.addons.bundles</groupId>
+        <artifactId>org.openhab.addons.reactor.bundles</artifactId>
+        <version>4.3.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>org.openhab.binding.mydlink</artifactId>
+    <packaging>bundle</packaging>
+
+    <name>openHAB Add-ons :: Bundles :: mydlink Binding</name>
+    <description>Binding for D-Link mydlink Smart Plugs</description>
+
+    <properties>
+        <bnd.importpackage>
+            javax.net.ssl,
+            org.eclipse.jetty.websocket.client,
+            org.eclipse.jetty.websocket.api
+        </bnd.importpackage>
+    </properties>
+
+    <dependencies>
+        <!-- Jetty WebSocket Client for Signal Agent Protocol -->
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-client</artifactId>
+            <version>9.4.54.v20240208</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-api</artifactId>
+            <version>9.4.54.v20240208</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Gson for JSON parsing -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+</project>

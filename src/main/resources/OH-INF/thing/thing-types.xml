@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="mydlink"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+    xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+    <!-- mydlink Account Bridge -->
+    <bridge-type id="account">
+        <label>mydlink Account</label>
+        <description>Connection to your mydlink cloud account</description>
+
+        <config-description>
+            <parameter name="email" type="text" required="true">
+                <label>Email</label>
+                <description>Your mydlink account email address</description>
+            </parameter>
+            <parameter name="password" type="text" required="true">
+                <context>password</context>
+                <label>Password</label>
+                <description>Your mydlink account password</description>
+            </parameter>
+            <parameter name="pollingInterval" type="integer" required="false">
+                <label>Polling Interval</label>
+                <description>Interval in seconds for polling device status (default: 60)</description>
+                <default>60</default>
+                <advanced>true</advanced>
+            </parameter>
+        </config-description>
+    </bridge-type>
+
+    <!-- mydlink Smart Plug Thing -->
+    <thing-type id="smartplug">
+        <supported-bridge-type-refs>
+            <bridge-type-ref id="account"/>
+        </supported-bridge-type-refs>
+
+        <label>mydlink Smart Plug</label>
+        <description>D-Link mydlink Smart Plug (DSP-W115, DSP-W118, DSP-W218, DSP-W245, DSP-W320)</description>
+
+        <channels>
+            <channel id="switch" typeId="switch"/>
+            <channel id="power" typeId="power"/>
+            <channel id="online" typeId="online"/>
+        </channels>
+
+        <properties>
+            <property name="deviceName">Unknown</property>
+            <property name="deviceModel">Unknown</property>
+            <property name="firmwareVersion">Unknown</property>
+            <property name="macAddress">Unknown</property>
+            <property name="pinCode">Unknown</property>
+        </properties>
+
+        <representation-property>deviceId</representation-property>
+
+        <config-description>
+            <parameter name="deviceId" type="text" required="true">
+                <label>Device ID</label>
+                <description>The mydlink device ID (shown in the mydlink app or from device discovery)</description>
+            </parameter>
+            <parameter name="macAddress" type="text" required="false">
+                <label>MAC Address</label>
+                <description>The device MAC address (optional, can be auto-discovered)</description>
+                <advanced>true</advanced>
+            </parameter>
+        </config-description>
+    </thing-type>
+
+    <!-- Channel Types -->
+    <channel-type id="switch">
+        <item-type>Switch</item-type>
+        <label>Switch</label>
+        <description>Turn the plug on or off</description>
+        <category>Switch</category>
+    </channel-type>
+
+    <channel-type id="power">
+        <item-type>Number:Power</item-type>
+        <label>Power</label>
+        <description>Current power consumption</description>
+        <category>Energy</category>
+        <state pattern="%.1f %unit%" readOnly="true"/>
+    </channel-type>
+
+    <channel-type id="online">
+        <item-type>Switch</item-type>
+        <label>Online</label>
+        <description>Indicates if the device is online and reachable</description>
+        <category>Status</category>
+        <state readOnly="true"/>
+    </channel-type>
+
+</thing:thing-descriptions>
