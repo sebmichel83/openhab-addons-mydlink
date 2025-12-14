@@ -82,6 +82,26 @@ sitemap mydlink label="mydlink Smart Plugs" {
 }
 ```
 
+## Installation
+
+### Using Pre-built JAR (Recommended)
+
+1. Download the JAR from the `release/` folder
+2. Copy it to your openHAB addons folder:
+   ```bash
+   cp org.openhab.binding.mydlink-5.0.0-SNAPSHOT.jar /usr/share/openhab/addons/
+   ```
+3. Restart openHAB or install via Karaf console:
+   ```
+   bundle:install file:/usr/share/openhab/addons/org.openhab.binding.mydlink-5.0.0-SNAPSHOT.jar
+   bundle:start org.openhab.binding.mydlink
+   ```
+
+### Compatibility
+
+- openHAB 4.x and 5.x
+- Java 17 or later
+
 ## Technical Details
 
 This binding uses two protocols to communicate with mydlink devices:
