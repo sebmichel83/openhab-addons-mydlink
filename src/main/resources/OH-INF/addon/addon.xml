@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon:addon id="mydlink"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:addon="https://openhab.org/schemas/addon/v1.0.0"
+    xsi:schemaLocation="https://openhab.org/schemas/addon/v1.0.0 https://openhab.org/schemas/addon-1.0.0.xsd">
+    <type>binding</type>
+    <name>mydlink Binding</name>
+    <description>Binding for D-Link mydlink Smart Plugs (DSP-W115, DSP-W118, DSP-W218, DSP-W245, DSP-W320)</description>
+    <connection>cloud</connection>
+    <countries/>
+</addon:addon>
