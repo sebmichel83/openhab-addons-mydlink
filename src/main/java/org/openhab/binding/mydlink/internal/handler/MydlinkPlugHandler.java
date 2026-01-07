@@ -92,6 +92,9 @@ public class MydlinkPlugHandler extends BaseThingHandler implements SignalAgentC
      * Connects to the device via Signal Agent protocol.
      */
     private void connect() {
+        // Disconnect any existing client first to prevent thread leak
+        disconnectSaClient();
+
         MydlinkPlugConfig cfg = config;
         if (cfg == null || cfg.deviceId == null) {
             return;

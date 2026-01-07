@@ -345,6 +345,17 @@ public class SignalAgentClient implements WebSocketListener {
         wsSession = null;
         signedIn = false;
 
+        // Stop the WebSocket client to prevent thread leak
+        WebSocketClient client = wsClient;
+        if (client != null) {
+            try {
+                client.stop();
+            } catch (Exception e) {
+                logger.debug("Error stopping WebSocket client: {}", e.getMessage());
+            }
+            wsClient = null;
+        }
+
         StateChangeListener listener = stateChangeListener;
         if (listener != null) {
             listener.onConnectionStateChanged(false);
